@@ -17,13 +17,26 @@ public class SemaphorePhilosophers {
     // Program duration in seconds
     private static final int PROGRAM_DURATION_SECONDS = 10;
 
+    // Possible philosopher states (not enums constants to speed up debug string building)
+    private static final char THINKING = 'T';
+    private static final char HUNGRY   = 'H';
+    private static final char EATING   = 'E';
+    
+    // Philosophers' state
+    private static char[] states = new char[5];
+    static {
+        for (int i = 0; i < 5; ++i) {
+            states[i] = THINKING;
+        }
+    }
+    
     // Philosopher processes
     private static process Philosopher((int id = 0; id < 5; ++id)) {
         // Those guys never stops !
         while (true) {
-            System.out.println("Philosopher #" + id + " is hungry");
+            setState(id, EATING);
             wait(BASE_TIME_EAT_MILLIS);
-            System.out.println("Philosopher #" + id + " is thinking");
+            setState(id, THINKING);
             wait(BASE_TIME_THINK_MILLIS);
         }
     }
@@ -43,6 +56,17 @@ public class SemaphorePhilosophers {
             System.err.println("NEVER INTERRUPT A THINKING PHILOSOPHER. NEVER. JUST DON'T. IT'S THE ONLY THING SOCRATES KNEW.");
             JR.exit(1);
         }
+    }
+    
+    // Encapsulates state changing and prints debug info
+    private static void setState(int id, char newState) {
+        states[id] = newState;
+        StringBuilder sb = new StringBuilder();
+        sb.append("  ").append(states[0]).append('\n');
+        sb.append(states[4]).append("   ").append(states[1]).append("\n ");
+        sb.append(states[3]).append(' ').append(states[2]);
+        sb.append("\n-----");
+        System.out.println(sb.toString());
     }
     
     // Called when the program is in trouble !
