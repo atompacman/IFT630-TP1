@@ -6,10 +6,10 @@ import java.util.concurrent.ThreadLocalRandom;
 public class SemaphorePhilosophers {
 
     // Base time in milliseconds a philosopher takes to eat
-    private static final int BASE_TIME_EAT_MILLIS = 500;
+    private static final int BASE_TIME_EAT_MILLIS = 800;
     
     // Base time in milliseconds a philosopher takes to think
-    private static final int BASE_TIME_THINK_MILLIS = 1000;
+    private static final int BASE_TIME_THINK_MILLIS = 500;
     
     // Maximum time in milliseconds that is randomly added to base time when eating/thinking
     private static final int RANDOM_ADDITIONNAL_TIME_MILLIS = 5;
@@ -32,6 +32,14 @@ public class SemaphorePhilosophers {
     
     // Mutex
     private static final sem mutex = 1;
+    
+    // Conditional variables
+    static cap void () canEat[] = new cap void()[5];
+    static {
+        for (int i = 0; i < 5; ++i) {
+            canEat[i] = new sem;
+        }
+    }
     
     // Philosopher processes
     private static process Philosopher((int id = 0; id < 5; ++id)) {
@@ -64,7 +72,13 @@ public class SemaphorePhilosophers {
     // Called when a philosopher wants to start eating
     private static void pickUpForks(int id) {
         P(mutex);
-        setState(id, EATING);
+        setState(id, HUNGRY);
+        eatIfPossible(id);
+        if (states[id] != EATING) {
+            V(mutex);
+            P(canEat[id]);
+            P(mutex);
+        }
         V(mutex);
     }
     
@@ -72,7 +86,18 @@ public class SemaphorePhilosophers {
     private static void putDownForks(int id) {
         P(mutex);
         setState(id, THINKING);
+        eatIfPossible((id + 4) % 5);
+        eatIfPossible((id + 1) % 5);
         V(mutex);
+    }
+    
+    // Called to make a philosopher eat if possible
+    private static void eatIfPossible(int id) {       
+        // Check if neighbours are not eating (forks are free) and that current philosopher is actually hungry
+        if (states[(id + 1) % 5] != EATING && states[(id + 4) % 5] != EATING && states[id] == HUNGRY) {
+            setState(id, EATING);
+            V(canEat[id]);
+        }
     }
     
     // Encapsulates state changing and prints debug info
