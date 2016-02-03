@@ -5,17 +5,44 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class SemaphorePhilosophers {
 
+    // Base time in milliseconds a philosopher takes to eat
+    private static final int BASE_TIME_EAT_MILLIS = 500;
+    
+    // Base time in milliseconds a philosopher takes to think
+    private static final int BASE_TIME_THINK_MILLIS = 1000;
+    
+    // Maximum time in milliseconds that is randomly added to base time when eating/thinking
+    private static final int RANDOM_ADDITIONNAL_TIME_MILLIS = 5;
+    
     // Program duration in seconds
     private static final int PROGRAM_DURATION_SECONDS = 10;
 
+    // Philosopher processes
+    private static process Philosopher((int id = 0; id < 5; ++id)) {
+        // Those guys never stops !
+        while (true) {
+            System.out.println("Philosopher #" + id + " is hungry");
+            wait(BASE_TIME_EAT_MILLIS);
+            System.out.println("Philosopher #" + id + " is thinking");
+            wait(BASE_TIME_THINK_MILLIS);
+        }
+    }
+    
     // Process that stops the program after a certain time
     private static process EndProgram {
+        wait(PROGRAM_DURATION_SECONDS * 1000);
+        JR.exit(1);
+    }
+    
+    // Encapsulates the waiting process
+    private static void wait(int baseTimeMillis) {
         try {
-            Thread.sleep(PROGRAM_DURATION_SECONDS * 1000);
+            // Wait for specified time plus some more milliseconds
+            Thread.sleep(baseTimeMillis + ThreadLocalRandom.current().nextInt(RANDOM_ADDITIONNAL_TIME_MILLIS + 1));
         } catch (InterruptedException e) {
             System.err.println("NEVER INTERRUPT A THINKING PHILOSOPHER. NEVER. JUST DON'T. IT'S THE ONLY THING SOCRATES KNEW.");
+            JR.exit(1);
         }
-        JR.exit(1);
     }
     
     // Called when the program is in trouble !
