@@ -30,13 +30,16 @@ public class SemaphorePhilosophers {
         }
     }
     
+    // Mutex
+    private static final sem mutex = 1;
+    
     // Philosopher processes
     private static process Philosopher((int id = 0; id < 5; ++id)) {
         // Those guys never stops !
         while (true) {
-            setState(id, EATING);
+            pickUpForks(id);
             wait(BASE_TIME_EAT_MILLIS);
-            setState(id, THINKING);
+            putDownForks(id);
             wait(BASE_TIME_THINK_MILLIS);
         }
     }
@@ -56,6 +59,20 @@ public class SemaphorePhilosophers {
             System.err.println("NEVER INTERRUPT A THINKING PHILOSOPHER. NEVER. JUST DON'T. IT'S THE ONLY THING SOCRATES KNEW.");
             JR.exit(1);
         }
+    }
+    
+    // Called when a philosopher wants to start eating
+    private static void pickUpForks(int id) {
+        P(mutex);
+        setState(id, EATING);
+        V(mutex);
+    }
+    
+    // Called when a philosopher wants to stop eating
+    private static void putDownForks(int id) {
+        P(mutex);
+        setState(id, THINKING);
+        V(mutex);
     }
     
     // Encapsulates state changing and prints debug info
