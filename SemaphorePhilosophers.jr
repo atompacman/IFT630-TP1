@@ -74,12 +74,10 @@ public class SemaphorePhilosophers {
         P(mutex);
         setState(id, HUNGRY);
         eatIfPossible(id);
-        if (states[id] != EATING) {
-            V(mutex);
-            P(canEat[id]);
-            P(mutex);
-        }
         V(mutex);
+        if (states[id] != EATING) {
+            P(canEat[id]);
+        }
     }
     
     // Called when a philosopher wants to stop eating
