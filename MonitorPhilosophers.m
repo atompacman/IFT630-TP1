@@ -3,6 +3,8 @@ import edu.ucdavis.jr.QuiescenceRegistrationException;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+// Commit test
+
 public _monitor MonitorPhilosophers {
 
     // Base time in milliseconds a philosopher takes to eat
