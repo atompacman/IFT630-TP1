@@ -3,7 +3,7 @@ import edu.ucdavis.jr.QuiescenceRegistrationException;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-public _monitor MonitorPhilosophers {
+public class MessagePhilosophers {
 
     // Base time in milliseconds a philosopher takes to eat
     private static final int BASE_TIME_EAT_MILLIS = 800;
@@ -30,20 +30,55 @@ public _monitor MonitorPhilosophers {
         }
     }
     
-    // Monitor
-    private static MonitorPhilosophers monitor = new MonitorPhilosophers("Monitor");
+    // Mutex
+    private static final sem mutex = 1;
     
     // Conditional variables
-    _condvar canEat[5];
+    static cap void () canEat[] = new cap void()[5];
+    static {
+        for (int i = 0; i < 5; ++i) {
+            canEat[i] = new sem;
+        }
+    }
     
     // Philosopher processes
     private static process Philosopher((int id = 0; id < 5; ++id)) {
+        cap void() channel = new op void();
+        
         // Those guys never stops !
         while (true) {
-            monitor.pickUpForks(id);
+            if (id == 2) {
+                send askOrReturnMutex(channel);
+            }
+            pickUpForks(id);
             wait(BASE_TIME_EAT_MILLIS);
-            monitor.putDownForks(id);
+            putDownForks(id);
             wait(BASE_TIME_THINK_MILLIS);
+            if (id == 2) {
+                send askOrReturnMutex(channel);
+            }
+        }
+    }
+    
+    // Communication channel between philosophers and the philosopher manager
+    private static op void askOrReturnMutex(cap void());
+    
+    // Process that controls access to critical sections (mutex but with message)
+    private static process PhilosopherManager {
+        // The private channel of the philosopher currently holding the mutex
+        cap void() mutexHolder = null;
+    
+        // Holds the private channel of the calling philosopher
+        cap void() callingPhilosopher;
+    
+        while (true) {
+            receive askOrReturnMutex(callingPhilosopher);
+            
+            if (mutexHolder == callingPhilosopher) {
+                System.out.println("VIDEO KILLED THE RADIO STAR");
+            } else if (mutexHolder == null) {
+                mutexHolder = callingPhilosopher;
+            }            
         }
     }
     
@@ -65,32 +100,36 @@ public _monitor MonitorPhilosophers {
     }
     
     // Called when a philosopher wants to start eating
-    _proc void pickUpForks(int id) {
+    private static void pickUpForks(int id) {
+        P(mutex);
         setState(id, HUNGRY);
         eatIfPossible(id);
+        V(mutex);
         if (states[id] != EATING) {
-            _wait(canEat[id]);
+            P(canEat[id]);
         }
     }
     
     // Called when a philosopher wants to stop eating
-    _proc void putDownForks(int id) {
+    private static void putDownForks(int id) {
+        P(mutex);
         setState(id, THINKING);
         eatIfPossible((id + 4) % 5);
         eatIfPossible((id + 1) % 5);
+        V(mutex);
     }
     
     // Called to make a philosopher eat if possible
-    private void eatIfPossible(int id) {       
+    private static void eatIfPossible(int id) {       
         // Check if neighbours are not eating (forks are free) and that current philosopher is actually hungry
         if (states[(id + 1) % 5] != EATING && states[(id + 4) % 5] != EATING && states[id] == HUNGRY) {
             setState(id, EATING);
-            _signal(canEat[id]);
+            V(canEat[id]);
         }
     }
     
     // Encapsulates state changing and prints debug info
-    private void setState(int id, char newState) {
+    private static void setState(int id, char newState) {
         states[id] = newState;
         StringBuilder sb = new StringBuilder();
         sb.append("  ").append(states[0]).append('\n');
