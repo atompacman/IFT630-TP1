@@ -1,6 +1,8 @@
 import edu.ucdavis.jr.JR;
 import edu.ucdavis.jr.QuiescenceRegistrationException;
 
+import java.util.Queue;
+import java.util.LinkedList;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class MessagePhilosophers {
@@ -30,9 +32,6 @@ public class MessagePhilosophers {
         }
     }
     
-    // Mutex
-    private static final sem mutex = 1;
-    
     // Conditional variables
     static cap void () canEat[] = new cap void()[5];
     static {
@@ -43,20 +42,15 @@ public class MessagePhilosophers {
     
     // Philosopher processes
     private static process Philosopher((int id = 0; id < 5; ++id)) {
+        // Philosopher's private channel
         cap void() channel = new op void();
         
         // Those guys never stops !
         while (true) {
-            if (id == 2) {
-                send askOrReturnMutex(channel);
-            }
-            pickUpForks(id);
+            pickUpForks(id, channel);
             wait(BASE_TIME_EAT_MILLIS);
-            putDownForks(id);
+            putDownForks(id, channel);
             wait(BASE_TIME_THINK_MILLIS);
-            if (id == 2) {
-                send askOrReturnMutex(channel);
-            }
         }
     }
     
@@ -64,21 +58,42 @@ public class MessagePhilosophers {
     private static op void askOrReturnMutex(cap void());
     
     // Process that controls access to critical sections (mutex but with message)
-    private static process PhilosopherManager {
-        // The private channel of the philosopher currently holding the mutex
+    private static process MutexManager {
+        // The queue of private channels of processes waiting to acquire the mutex
+        Queue<cap void()> waitingForMutex = new LinkedList<cap void()>();
+        
+        // The private channel of the process currently holding the mutex
         cap void() mutexHolder = null;
     
-        // Holds the private channel of the calling philosopher
-        cap void() callingPhilosopher;
+        // Holds the private channel of the calling processes
+        cap void() calling = null;
     
         while (true) {
-            receive askOrReturnMutex(callingPhilosopher);
+            // Wait for a processes to enter or exit a critical section
+            receive askOrReturnMutex(calling);
             
-            if (mutexHolder == callingPhilosopher) {
-                System.out.println("VIDEO KILLED THE RADIO STAR");
+            // If it's the mutex holder that is exiting a critical section
+            if (mutexHolder == calling) {
+                // If there is nobody waiting for the mutex
+                if (waitingForMutex.isEmpty()) {
+                    mutexHolder = null;
+                } else {
+                    // Give the mutex to the next processes in the queue
+                    mutexHolder = waitingForMutex.poll();
+                    // Call back the calling processes through its private channel
+                    send mutexHolder();
+                }
+            // If nobody currently has the mutex
             } else if (mutexHolder == null) {
-                mutexHolder = callingPhilosopher;
-            }            
+                mutexHolder = calling;
+                // Call the processes through its private channel
+                send mutexHolder();
+            // If another processes has the mutex
+            } else {
+                // Process goes in a queue, waiting for the mutex to be free
+                // This is tagged by the compiler as an unsafe operation... why ??
+                waitingForMutex.add(calling);
+            }
         }
     }
     
@@ -100,23 +115,38 @@ public class MessagePhilosophers {
     }
     
     // Called when a philosopher wants to start eating
-    private static void pickUpForks(int id) {
-        P(mutex);
+    private static void pickUpForks(int id, cap void() channel) {
+        // Ask for mutex
+        send askOrReturnMutex(channel);
+        
+        // Wait for manager to give mutex
+        receive channel();
+        
         setState(id, HUNGRY);
         eatIfPossible(id);
-        V(mutex);
+        
+        // Give the mutex back
+        send askOrReturnMutex(channel);
+        
         if (states[id] != EATING) {
             P(canEat[id]);
         }
     }
     
     // Called when a philosopher wants to stop eating
-    private static void putDownForks(int id) {
-        P(mutex);
+    private static void putDownForks(int id, cap void() channel) {
+        // Ask for mutex
+        send askOrReturnMutex(channel);
+        
+        // Wait for manager to give mutex
+        receive channel();
+        
         setState(id, THINKING);
         eatIfPossible((id + 4) % 5);
         eatIfPossible((id + 1) % 5);
-        V(mutex);
+        
+        // Give the mutex back
+        send askOrReturnMutex(channel);
     }
     
     // Called to make a philosopher eat if possible
