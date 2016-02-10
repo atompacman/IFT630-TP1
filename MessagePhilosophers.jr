@@ -31,25 +31,21 @@ public class MessagePhilosophers {
             states[i] = THINKING;
         }
     }
-    
-    // Conditional variables
-    static cap void () canEat[] = new cap void()[5];
+    // Philosopher process' private channels
+    private static cap void() channels[] = new cap void()[5];
     static {
         for (int i = 0; i < 5; ++i) {
-            canEat[i] = new sem;
+            channels[i] = new op void();
         }
     }
-    
+
     // Philosopher processes
     private static process Philosopher((int id = 0; id < 5; ++id)) {
-        // Philosopher's private channel
-        cap void() channel = new op void();
-        
         // Those guys never stops !
         while (true) {
-            pickUpForks(id, channel);
+            pickUpForks(id);
             wait(BASE_TIME_EAT_MILLIS);
-            putDownForks(id, channel);
+            putDownForks(id);
             wait(BASE_TIME_THINK_MILLIS);
         }
     }
@@ -91,7 +87,7 @@ public class MessagePhilosophers {
             // If another processes has the mutex
             } else {
                 // Process goes in a queue, waiting for the mutex to be free
-                // This is tagged by the compiler as an unsafe operation... why ??
+                // This is tagged by the compiler as an unsafe operation... why ?
                 waitingForMutex.add(calling);
             }
         }
@@ -115,38 +111,38 @@ public class MessagePhilosophers {
     }
     
     // Called when a philosopher wants to start eating
-    private static void pickUpForks(int id, cap void() channel) {
+    private static void pickUpForks(int id) {
         // Ask for mutex
-        send askOrReturnMutex(channel);
+        send askOrReturnMutex(channels[id]);
         
         // Wait for manager to give mutex
-        receive channel();
+        receive channels[id]();
         
         setState(id, HUNGRY);
         eatIfPossible(id);
         
         // Give the mutex back
-        send askOrReturnMutex(channel);
+        send askOrReturnMutex(channels[id]);
         
         if (states[id] != EATING) {
-            P(canEat[id]);
+            receive channels[id]();
         }
     }
     
     // Called when a philosopher wants to stop eating
-    private static void putDownForks(int id, cap void() channel) {
+    private static void putDownForks(int id) {
         // Ask for mutex
-        send askOrReturnMutex(channel);
+        send askOrReturnMutex(channels[id]);
         
         // Wait for manager to give mutex
-        receive channel();
+        receive channels[id]();
         
         setState(id, THINKING);
         eatIfPossible((id + 4) % 5);
         eatIfPossible((id + 1) % 5);
         
         // Give the mutex back
-        send askOrReturnMutex(channel);
+        send askOrReturnMutex(channels[id]);
     }
     
     // Called to make a philosopher eat if possible
@@ -154,7 +150,7 @@ public class MessagePhilosophers {
         // Check if neighbours are not eating (forks are free) and that current philosopher is actually hungry
         if (states[(id + 1) % 5] != EATING && states[(id + 4) % 5] != EATING && states[id] == HUNGRY) {
             setState(id, EATING);
-            V(canEat[id]);
+            send channels[id]();
         }
     }
     
