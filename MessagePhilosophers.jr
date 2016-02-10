@@ -24,6 +24,9 @@ public class MessagePhilosophers {
     private static final char HUNGRY   = 'H';
     private static final char EATING   = 'E';
     
+    // Used to print of many times a philosopher has eaten
+    private static int[] numTimesEating = new int[5];
+    
     // Philosophers' state
     private static char[] states = new char[5];
     static {
@@ -156,13 +159,33 @@ public class MessagePhilosophers {
     
     // Encapsulates state changing and prints debug info
     private static void setState(int id, char newState) {
+        // Do debug verifications
+        char currState = states[id];
+        boolean isValidTransition = true;
+        isValidTransition &= newState != currState;
+        isValidTransition &= currState != THINKING || newState == HUNGRY;
+        isValidTransition &= currState != HUNGRY   || newState == EATING;
+        isValidTransition &= currState != EATING   || newState == THINKING;
+        if (!isValidTransition) {
+            System.err.printf("\n *** ERROR *** Philosopher #%d tried to make an invalid " +
+                "state transition: %s -> %s *** ERROR *** \n", id, currState, newState);
+            JR.exit(1);
+        }
+        
+        // Change the state
         states[id] = newState;
         StringBuilder sb = new StringBuilder();
-        sb.append("  ").append(states[0]).append('\n');
-        sb.append(states[4]).append("   ").append(states[1]).append("\n ");
-        sb.append(states[3]).append(' ').append(states[2]);
-        sb.append("\n-----");
+        
+        // Print debug info
+        sb.append("      ").append(states[0]).append('(').append(Integer.toString(numTimesEating[0])).append(")\n");
+        sb.append(states[4]).append('(').append(Integer.toString(numTimesEating[4])).append(')');
+        sb.append("        ").append(states[1]).append('(').append(Integer.toString(numTimesEating[1])).append(")\n    ");
+        sb.append(states[3]).append('(').append(Integer.toString(numTimesEating[3])).append(") ");
+        sb.append(states[2]).append('(').append(Integer.toString(numTimesEating[2])).append(")\n-----");
         System.out.println(sb.toString());
+        
+        // Increment the number of times a philosopher ate
+        ++numTimesEating[id];
     }
     
     // Called when the program is in trouble !
