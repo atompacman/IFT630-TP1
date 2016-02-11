@@ -1,0 +1,127 @@
+import edu.ucdavis.jr.JR;
+import edu.ucdavis.jr.QuiescenceRegistrationException;
+
+import java.util.concurrent.ThreadLocalRandom;
+
+public class SemaphoreAmusementPark {
+
+    // Ride duration in seconds
+    // private static final int RIDE_DURATION_SECONDS = 30;
+
+    // Lap duration in seconds (5 laps = 1 ride)
+    private static final int LAP_DURATION_SECONDS = 3;
+
+    // Program duration in seconds
+    private static final int PROGRAM_DURATION_SECONDS = 20;
+
+    // Maximum time in milliseconds that is randomly added to base time when riding the rollecoaster
+    private static final int RANDOM_ADDITIONNAL_TIME_MILLIS = 5;
+
+    // Rollercoaster maximum capacity
+    private static final int C = 16;
+
+    // Total number of people in line and on the rollercoaster
+    private static final int N = 50;
+
+
+    // Possible states of a person (WIP)
+    private static final char WAITING = 'W';
+    private static final char RIDING = 'R';
+
+    // // Possible states of the rolercoaster (WIP)
+    // private static final char ON = 'ON';
+    // private static final char OFF = 'OFF';
+    
+    // Each person's state
+    private static char[] personStates = new char[N];
+    static {
+        for (int i = 0; i < N; ++i) {
+            personStates[i] = WAITING;
+        }
+    }
+
+    // Rollercoaster current state
+    private static int currentLap = 0;  // STOPPED == 0, else 1 to 5
+    
+    // Mutex
+    private static final sem mutex = 1;
+    
+    // Conditional variables for people
+    // static cap void () canEmbark[] = new cap void()[N];
+    // static {
+    //     for (int i = 0; i < N; ++i) {
+    //         canEmbark[i] = new sem;
+    //     }
+    // }
+    
+    // Rollercoaster process
+    private static process RollerCoaster {
+        // It goes on and on
+        while (true) {
+            ++currentLap;
+            if (currentLap == 1)
+                System.out.println("RIDE HAS STARTED! (FIRST LAP)");
+            else
+                System.out.println("NEW LAP! (" + currentLap + ")");
+
+            wait(LAP_DURATION_SECONDS * 1000);
+            if (currentLap == 5) {
+                currentLap = 0;
+                System.out.println("END OF THIS RIDE.");
+                break;
+            }
+
+        }
+    }
+
+    // Person process
+    private static process Person((int id = 0; id < N; ++id)) {
+        // Those guys never stop !
+        // while (true) {
+        // get in ride if possible
+        // else, wait
+        // }
+    }
+    
+    // Process that stops the program after a certain time
+    private static process EndProgram {
+        wait(PROGRAM_DURATION_SECONDS * 1000);
+        JR.exit(1);
+    }
+    
+    // Encapsulates the waiting process
+    private static void wait(int baseTimeMillis) {
+        try {
+            // Wait for specified time plus some more milliseconds
+            Thread.sleep(baseTimeMillis + ThreadLocalRandom.current().nextInt(RANDOM_ADDITIONNAL_TIME_MILLIS + 1));
+        } catch (InterruptedException e) {
+            System.err.println("WAITING INTERRUPTED !");
+            JR.exit(1);
+        }
+    }
+    
+    // Encapsulates state changing and prints debug info
+    // private static void setState(int id, char newState) {
+    //     states[id] = newState;
+    //     StringBuilder sb = new StringBuilder();
+    //     sb.append("  ").append(states[0]).append('\n');
+    //     sb.append(states[4]).append("   ").append(states[1]).append("\n ");
+    //     sb.append(states[3]).append(' ').append(states[2]);
+    //     sb.append("\n-----");
+    //     System.out.println(sb.toString());
+    // }
+    
+    // Called when the program is in trouble !
+    public static op void unexpectedEnd() {
+        System.err.println("PROCESSES ARE EITHER IN A DEADLOCK OR ALL DEAD!!!");
+    }
+
+    // Program entry point
+    public static void main(String[] args) {
+        try {
+            JR.registerQuiescenceAction(unexpectedEnd);
+        } catch (QuiescenceRegistrationException e) {
+            e.printStackTrace();
+        }
+    }
+}
