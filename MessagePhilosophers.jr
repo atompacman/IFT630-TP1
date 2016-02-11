@@ -1,9 +1,4 @@
 import edu.ucdavis.jr.JR;
-import edu.ucdavis.jr.QuiescenceRegistrationException;
-
-import java.util.Queue;
-import java.util.LinkedList;
-import java.util.concurrent.ThreadLocalRandom;
 
 public final class MessagePhilosophers extends AbstractPhilosophers {
 
