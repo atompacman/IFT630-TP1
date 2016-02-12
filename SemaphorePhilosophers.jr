@@ -1,87 +1,51 @@
 import edu.ucdavis.jr.JR;
-import edu.ucdavis.jr.QuiescenceRegistrationException;
 
-import java.util.concurrent.ThreadLocalRandom;
+public final class SemaphorePhilosophers extends AbstractPhilosophers {
 
-public class SemaphorePhilosophers {
-
-    // Base time in milliseconds a philosopher takes to eat
-    private static final int BASE_TIME_EAT_MILLIS = 800;
-    
-    // Base time in milliseconds a philosopher takes to think
-    private static final int BASE_TIME_THINK_MILLIS = 500;
-    
-    // Maximum time in milliseconds that is randomly added to base time when eating/thinking
-    private static final int RANDOM_ADDITIONNAL_TIME_MILLIS = 5;
-    
-    // Program duration in seconds
-    private static final int PROGRAM_DURATION_SECONDS = 10;
-
-    // Possible philosopher states (not enums constants to speed up debug string building)
-    private static final char THINKING = 'T';
-    private static final char HUNGRY   = 'H';
-    private static final char EATING   = 'E';
-    
-    // Philosophers' state
-    private static char[] states = new char[5];
-    static {
-        for (int i = 0; i < 5; ++i) {
-            states[i] = THINKING;
-        }
-    }
-    
     // Mutex
-    private static final sem mutex = 1;
+    private final sem mutex = 1;
     
     // Conditional variables
-    static cap void () canEat[] = new cap void()[5];
-    static {
-        for (int i = 0; i < 5; ++i) {
-            canEat[i] = new sem;
-        }
-    }
-    
-    // Philosopher processes
-    private static process Philosopher((int id = 0; id < 5; ++id)) {
-        // Those guys never stops !
-        while (true) {
-            pickUpForks(id);
-            wait(BASE_TIME_EAT_MILLIS);
-            putDownForks(id);
-            wait(BASE_TIME_THINK_MILLIS);
-        }
-    }
-    
-    // Process that stops the program after a certain time
-    private static process EndProgram {
-        wait(PROGRAM_DURATION_SECONDS * 1000);
-        JR.exit(1);
-    }
-    
-    // Encapsulates the waiting process
-    private static void wait(int baseTimeMillis) {
-        try {
-            // Wait for specified time plus some more milliseconds
-            Thread.sleep(baseTimeMillis + ThreadLocalRandom.current().nextInt(RANDOM_ADDITIONNAL_TIME_MILLIS + 1));
-        } catch (InterruptedException e) {
-            System.err.println("NEVER INTERRUPT A THINKING PHILOSOPHER. NEVER. JUST DON'T. IT'S THE ONLY THING SOCRATES KNEW.");
-            JR.exit(1);
-        }
+    private cap void() canEat[] = new cap void()[5];
+
+    // Called when a philosopher process starts
+    @Override
+    protected void initPhilosopherProcess(int id) {
+        canEat[id] = new sem(0);
     }
     
     // Called when a philosopher wants to start eating
-    private static void pickUpForks(int id) {
+    @Override
+    protected void pickUpForks(int id) {
         P(mutex);
+        if (states[id] == HUNGRY) {
+            System.out.println("FAIL1");
+            JR.exit(1);
+        }
         setState(id, HUNGRY);
+        if (states[id] != HUNGRY) {
+            System.out.println("FAIL2");
+            JR.exit(1);
+        }
+        variableWait(100);
+        if (states[id] != HUNGRY) {
+            System.out.println("FAIL3");
+            JR.exit(1);
+        }
         eatIfPossible(id);
         V(mutex);
-        if (states[id] != EATING) {
+        
+        if (states[id] == HUNGRY) {
             P(canEat[id]);
+            if (states[id] == HUNGRY) {
+                System.out.println("WTF!!");
+            }
         }
     }
     
     // Called when a philosopher wants to stop eating
-    private static void putDownForks(int id) {
+    @Override
+    protected void putDownForks(int id) {
         P(mutex);
         setState(id, THINKING);
         eatIfPossible((id + 4) % 5);
@@ -90,7 +54,7 @@ public class SemaphorePhilosophers {
     }
     
     // Called to make a philosopher eat if possible
-    private static void eatIfPossible(int id) {       
+    private void eatIfPossible(int id) {
         // Check if neighbours are not eating (forks are free) and that current philosopher is actually hungry
         if (states[(id + 1) % 5] != EATING && states[(id + 4) % 5] != EATING && states[id] == HUNGRY) {
             setState(id, EATING);
@@ -98,28 +62,9 @@ public class SemaphorePhilosophers {
         }
     }
     
-    // Encapsulates state changing and prints debug info
-    private static void setState(int id, char newState) {
-        states[id] = newState;
-        StringBuilder sb = new StringBuilder();
-        sb.append("  ").append(states[0]).append('\n');
-        sb.append(states[4]).append("   ").append(states[1]).append("\n ");
-        sb.append(states[3]).append(' ').append(states[2]);
-        sb.append("\n-----");
-        System.out.println(sb.toString());
-    }
-    
-    // Called when the program is in trouble !
-    public static op void unexpectedEnd() {
-        System.err.println("PROCESSES ARE EITHER IN A DEADLOCK OR ALL DEAD!!!");
-    }
-
     // Program entry point
     public static void main(String[] args) {
-        try {
-            JR.registerQuiescenceAction(unexpectedEnd);
-        } catch (QuiescenceRegistrationException e) {
-            e.printStackTrace();
-        }
+        registerUnexpectedEndAction();
+        new SemaphorePhilosophers();
     }
 }

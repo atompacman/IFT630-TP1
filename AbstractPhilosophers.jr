@@ -1,0 +1,130 @@
+import edu.ucdavis.jr.JR;
+import edu.ucdavis.jr.QuiescenceRegistrationException;
+
+import java.util.concurrent.ThreadLocalRandom;
+
+public abstract class AbstractPhilosophers {
+
+    // Base time in milliseconds a philosopher takes to eat
+    private static final int BASE_TIME_EAT_MILLIS = 80;
+    
+    // Base time in milliseconds a philosopher takes to think
+    private static final int BASE_TIME_THINK_MILLIS = 50;
+    
+    // Maximum time in milliseconds that is randomly added to base time when eating/thinking
+    private static final int RANDOM_ADDITIONNAL_TIME_MILLIS = 10;
+    
+    // Program duration in seconds
+    private static final int PROGRAM_DURATION_SECONDS = 5;
+
+    // Possible philosopher states (not enums constants to speed up debug string building)
+    protected static final char THINKING = 'T';
+    protected static final char HUNGRY   = 'H';
+    protected static final char EATING   = 'E';
+    
+    // Used to print of many times a philosopher has eaten
+    private int[] numTimesEating = new int[5];
+    
+    // Philosophers' state
+    protected char[] states = new char[5];
+
+    // Philosopher processes
+    private process Philosopher((int id = 0; id < 5; ++id)) {
+        initPhilosopherProcess(id);
+        states[id] = THINKING;
+        
+        while (true) {
+            pickUpForks(id);
+            if (states[id] != EATING) {
+                System.out.println("#" + id + " is " + states[id] + " after pickUpForks BEFORE WAIT");
+            }
+            variableWait(BASE_TIME_EAT_MILLIS);
+            if (states[id] != EATING) {
+                System.out.println("#" + id + " is " + states[id] + " after pickUpForks AFTER WAIT");
+            }
+            putDownForks(id);
+            if (states[id] != THINKING) {
+                System.out.println("#" + id + " is " + states[id] + " after putDownForks BEFORE WAIT");
+            }
+            variableWait(BASE_TIME_THINK_MILLIS);
+            if (states[id] != THINKING) {
+                System.out.println("#" + id + " is " + states[id] + " after putDownForks AFTER WAIT");
+            }
+        }
+    }
+    
+    // Called when a philosopher process starts (avoids async initialization problem with constructors)
+    // Different for each concurrency model
+    protected abstract void initPhilosopherProcess(int id);
+    
+    // Called when a philosopher wants to start eating.
+    // Different for each concurrency model
+    protected abstract void pickUpForks(int id);
+    
+    // Called when a philosopher wants to stop eating
+    // Different for each concurrency model
+    protected abstract void putDownForks(int id);
+
+    // Encapsulates state changing and prints debug info
+    protected void setState(int id, char newState) {
+        // Do debug verifications
+        char currState = states[id];
+        boolean isValidTransition = true;
+        isValidTransition &= newState != currState;
+        isValidTransition &= currState != THINKING || newState == HUNGRY;
+        isValidTransition &= currState != HUNGRY   || newState == EATING;
+        isValidTransition &= currState != EATING   || newState == THINKING;
+        if (!isValidTransition) {
+            System.err.printf("\n *** ERROR *** Philosopher #%d tried to make an invalid " +
+                "state transition: %s -> %s *** ERROR *** \n", id, currState, newState);
+            //JR.exit(1);
+        }
+        
+        // Change the state
+        states[id] = newState;
+        
+        // Increment the number of times a philosopher ate
+        if (newState == EATING) {
+            ++numTimesEating[id];
+        }
+        
+        // Print debug info
+        StringBuilder sb = new StringBuilder();
+        sb.append("  ").append(states[0]).append("   |   ").append(numTimesEating[0]).append('\n');
+        sb.append(states[4]).append("   ").append(states[1]).append(" | ").append(numTimesEating[4]).append("   ").append(numTimesEating[1]).append("\n ");
+        sb.append(states[3]).append(' ').append(states[2]).append("  |  ").append(numTimesEating[3]).append(' ').append(numTimesEating[2]).append("\n-------------");
+        System.out.println(sb.toString());
+    }
+    
+    // Encapsulates the waiting process
+    protected static void variableWait(int baseTimeMillis) {
+        try {
+            // Wait for specified time plus some more milliseconds to simulate real-world randomness
+            Thread.sleep(baseTimeMillis + ThreadLocalRandom.current().nextInt(RANDOM_ADDITIONNAL_TIME_MILLIS + 1));
+        } catch (InterruptedException e) {
+            System.err.println("NEVER INTERRUPT A THINKING PHILOSOPHER. NEVER. JUST DON'T. IT'S THE ONLY THING SOCRATES KNEW.");
+            JR.exit(1);
+        }
+    }
+    
+    // Process that stops the program after a certain time
+    private static process EndProgram {
+        variableWait(PROGRAM_DURATION_SECONDS * 1000);
+        JR.exit(1);
+    }
+
+    // Called when the program is in trouble !
+    public static op void unexpectedEnd() {
+        System.err.println("PROCESSES ARE EITHER IN A DEADLOCK OR ALL DEAD!!!");
+    }
+
+    // Register function to call when things went wrong
+    public static void registerUnexpectedEndAction() {
+        try {
+            JR.registerQuiescenceAction(unexpectedEnd);
+        } catch (QuiescenceRegistrationException e) {
+            e.printStackTrace();
+            JR.exit(1);
+        }
+    }
+}
