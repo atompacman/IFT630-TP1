@@ -6,16 +6,16 @@ import java.util.concurrent.ThreadLocalRandom;
 public abstract class AbstractPhilosophers {
 
     // Base time in milliseconds a philosopher takes to eat
-    private static final int BASE_TIME_EAT_MILLIS = 80;
+    private static final int BASE_TIME_EAT_MILLIS = 8;
     
     // Base time in milliseconds a philosopher takes to think
-    private static final int BASE_TIME_THINK_MILLIS = 50;
+    private static final int BASE_TIME_THINK_MILLIS = 5;
     
     // Maximum time in milliseconds that is randomly added to base time when eating/thinking
-    private static final int RANDOM_ADDITIONNAL_TIME_MILLIS = 10;
+    private static final int RANDOM_ADDITIONNAL_TIME_MILLIS = 2;
     
     // Program duration in seconds
-    private static final int PROGRAM_DURATION_SECONDS = 5;
+    private static final int PROGRAM_DURATION_SECONDS = 10;
 
     // Possible philosopher states (not enums constants to speed up debug string building)
     protected static final char THINKING = 'T';
@@ -35,20 +35,17 @@ public abstract class AbstractPhilosophers {
         
         while (true) {
             pickUpForks(id);
+            
             if (states[id] != EATING) {
-                System.out.println("#" + id + " is " + states[id] + " after pickUpForks BEFORE WAIT");
+                System.err.printf("\n *** Philosopher #%d is %s after picking up forks *** ERROR *** \n", id, states[id]);
+                JR.exit(1);
             }
-            variableWait(BASE_TIME_EAT_MILLIS);
-            if (states[id] != EATING) {
-                System.out.println("#" + id + " is " + states[id] + " after pickUpForks AFTER WAIT");
-            }
+            
             putDownForks(id);
+            
             if (states[id] != THINKING) {
-                System.out.println("#" + id + " is " + states[id] + " after putDownForks BEFORE WAIT");
-            }
-            variableWait(BASE_TIME_THINK_MILLIS);
-            if (states[id] != THINKING) {
-                System.out.println("#" + id + " is " + states[id] + " after putDownForks AFTER WAIT");
+                System.err.printf("\n *** Philosopher #%d is %s after putting forks down *** ERROR *** \n", id, states[id]);
+                JR.exit(1);
             }
         }
     }
@@ -77,7 +74,7 @@ public abstract class AbstractPhilosophers {
         if (!isValidTransition) {
             System.err.printf("\n *** ERROR *** Philosopher #%d tried to make an invalid " +
                 "state transition: %s -> %s *** ERROR *** \n", id, currState, newState);
-            //JR.exit(1);
+            JR.exit(1);
         }
         
         // Change the state

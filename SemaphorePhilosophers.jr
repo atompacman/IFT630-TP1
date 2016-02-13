@@ -18,29 +18,10 @@ public final class SemaphorePhilosophers extends AbstractPhilosophers {
     @Override
     protected void pickUpForks(int id) {
         P(mutex);
-        if (states[id] == HUNGRY) {
-            System.out.println("FAIL1");
-            JR.exit(1);
-        }
         setState(id, HUNGRY);
-        if (states[id] != HUNGRY) {
-            System.out.println("FAIL2");
-            JR.exit(1);
-        }
-        variableWait(100);
-        if (states[id] != HUNGRY) {
-            System.out.println("FAIL3");
-            JR.exit(1);
-        }
         eatIfPossible(id);
         V(mutex);
-        
-        if (states[id] == HUNGRY) {
-            P(canEat[id]);
-            if (states[id] == HUNGRY) {
-                System.out.println("WTF!!");
-            }
-        }
+        P(canEat[id]);
     }
     
     // Called when a philosopher wants to stop eating
