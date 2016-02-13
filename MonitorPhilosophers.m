@@ -72,7 +72,6 @@ public final _monitor MonitorPhilosophers {
     
     // Program entry point
     public static void main(String[] args) {
-        Adapter.registerUnexpectedEndAction();
         new MonitorPhilosophers("Monitor", 0);
     }
 }

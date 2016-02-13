@@ -45,7 +45,6 @@ public final class SemaphorePhilosophers extends AbstractPhilosophers {
     
     // Program entry point
     public static void main(String[] args) {
-        registerUnexpectedEndAction();
         new SemaphorePhilosophers();
     }
 }

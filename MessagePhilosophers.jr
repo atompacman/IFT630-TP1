@@ -104,7 +104,6 @@ public final class MessagePhilosophers extends AbstractPhilosophers {
     
     // Program entry point
     public static void main(String[] args) {
-        registerUnexpectedEndAction();
         new MessagePhilosophers();
     }
 }
