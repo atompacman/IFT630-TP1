@@ -1,0 +1,97 @@
+import edu.ucdavis.jr.JR;
+
+import java.util.Queue;
+import java.util.LinkedList;
+
+public abstract class AbstractBarbershop extends AbstractConcurrencyProgram {
+
+    // Base time in milliseconds the barber takes to cut the hair of a client
+    private static final int BASE_TIME_HAIRCUT = 10;
+    
+    // Base time in milliseconds the client waits before returning to the barbershop
+    private static final int BASE_TIME_RETURN_TO_BARBERSHOP = 100;
+
+    // Tells how many clients can wait in the barbershop to wait for their hair to be cut
+    protected static final int NUM_CHAIRS_IN_WAITING_ROOM = 5;
+    
+    // The number of clients in extra to the number of available chairs in the waiting room
+    private static final int NUM_EXTRA_CLIENTS = 3;
+    
+    // Total number of client processes
+    protected static final int TOTAL_NUM_CLIENTS = NUM_CHAIRS_IN_WAITING_ROOM + NUM_EXTRA_CLIENTS;
+    
+    // First-in-first-out queue that tells who is the next client (id) to have its hair cut
+    protected final Queue<Integer> waitingList;
+    
+    // Represents the physical waiting room, telling what is the current client (id) sitting on a specific chair (null means chair is free)
+    protected final Integer[] chairs;
+
+    // The client (id) that is currently having its hair cut
+    protected Integer clientCurrentlyServed;
+    
+    // Barbershop client processes
+    private process Client((int id = 0; id < TOTAL_NUM_CLIENTS; ++id)) {
+        initClientProcess(id);
+        variableWait(0);
+        while (true) {
+            goToTheBarbershop(id);
+            variableWait(BASE_TIME_RETURN_TO_BARBERSHOP);
+        }
+    }
+    
+    // Barber process
+    private process Barber {
+        while(true) {
+            sleepUntilClient();
+            variableWait(BASE_TIME_HAIRCUT);
+            waitForClientToLeave();
+        }
+    }
+    
+    // Called when a client process starts (avoids async initialization problem with constructors)
+    // Different for each concurrency model
+    protected abstract void initClientProcess(int id);
+    
+    // Called when a client wants to get its hair cut
+    // Different for each concurrency model
+    protected abstract void goToTheBarbershop(int id);
+
+    // Called by the barber to make him sleep if possible and process a client
+    // Different for each concurrency model
+    protected abstract void sleepUntilClient();
+    
+    // Called by the barber when he is done cutting the hair of its client
+    // Different for each concurrency model
+    protected abstract void waitForClientToLeave();
+    
+    // Initialize basic data structures
+    protected AbstractBarbershop() {
+        this.waitingList           = new LinkedList<Integer>();
+        this.chairs                = new Integer[NUM_CHAIRS_IN_WAITING_ROOM];
+        this.clientCurrentlyServed = null;
+    }
+
+    @Override
+    protected void log(String debugLine) {
+        StringBuilder sb = new StringBuilder();
+        
+        // Waiting room
+        for (int i = 0; i < NUM_CHAIRS_IN_WAITING_ROOM; ++i) {
+            Integer clientSittingOnChair = chairs[i];
+            sb.append(clientSittingOnChair == null ? '.' : Integer.toString(clientSittingOnChair));
+        }
+        
+        // If there are no client in the shop
+        if (clientCurrentlyServed == null) {
+            sb.append("[ ] (B)  ");
+        // If there is someone having its hair cut
+        } else {
+            sb.append('[').append(clientCurrentlyServed).append("]B( )  ");
+        }
+        
+        // Append message
+        sb.append(debugLine);
+        
+        super.log(sb.toString());
+    }
+}

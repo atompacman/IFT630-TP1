@@ -1,0 +1,106 @@
+import edu.ucdavis.jr.JR;
+
+public final class SemaphoreBarbershop extends AbstractBarbershop {
+
+    // Mutex
+    private final sem mutex = 1;
+    
+    // Used by the current client to wait for its hair to be cut
+    private final sem haircutIsFinished = 0;
+    
+    // Used by the barber to wait for a client to wake himself up
+    private final sem aClientArrives = 0;
+    
+    // Used by the barber to wait after the client to exit the barbershop
+    private final sem clientIsGone = 0;
+    
+    // Used by clients to wait after their turn to get a haircut
+    private cap void() turnToGetAHaircut[] = new cap void()[TOTAL_NUM_CLIENTS];
+
+    // Called when a philosopher process starts
+    @Override
+    protected void initClientProcess(int id) {
+        turnToGetAHaircut[id] = new sem(0);
+    }
+    
+    // Called when a philosopher wants to start eating
+    @Override
+    protected void goToTheBarbershop(int id) {
+        log("#" + id + " arrives at the barbershop");
+        P(mutex);
+        
+        // Return home if there are no chairs left in the waiting room
+        if (waitingList.size() == NUM_CHAIRS_IN_WAITING_ROOM) {
+            log("#" + id + " returns home because waiting room is full");
+            V(mutex);
+            return;
+        }
+        
+        // If there are not client in the shop
+        if (clientCurrentlyServed == null) {
+            log("#" + id + " wakes up the sleeping barber and gets an haircut");
+            // Be the next client
+            clientCurrentlyServed = id;
+            
+            // Wake barber up
+            V(aClientArrives);
+            V(mutex);
+        } else {
+            // Sit on a free chair
+            int freeChair = -1;
+            for (int i = 0; i < NUM_CHAIRS_IN_WAITING_ROOM; ++i) {
+                if (chairs[i] == null) {
+                    freeChair = i;
+                    break;
+                }
+            }
+            chairs[freeChair] = id;
+            log("#" + id + " sits on waiting chair #" + freeChair);
+            // Add itself to the waiting list
+            waitingList.add(id);
+        
+            // Wait for the barber to call my turn
+            V(mutex);
+            P(turnToGetAHaircut[id]);
+            // Get off the chair
+            chairs[freeChair] = null;
+            log("#" + id + " is called by the barber, leaves waiting chair #" + freeChair + " and get an haircut");
+        }
+        // Wait the the haircut to be finished
+        P(haircutIsFinished);
+        
+        // Tell the barber that he can serve another client
+        V(clientIsGone);
+    }
+
+    // Called by the barber to wait after a client (if needed) and start the haircut
+    @Override
+    protected void sleepUntilClient() {
+        // If there are no clients waiting for their hair to be cut, wait
+        P(mutex);
+        if (waitingList.isEmpty()) {
+            clientCurrentlyServed = null;
+            log("The barber goes to sleep because the waiting room is empty");
+            V(mutex);
+            P(aClientArrives);
+        } else {
+            // Get the next client in the list
+            clientCurrentlyServed = waitingList.poll();
+            V(turnToGetAHaircut[clientCurrentlyServed]);
+            V(mutex);
+        }
+    }
+    
+    // Called by the barber when he is done cutting the hair of its client
+    @Override
+    protected void waitForClientToLeave() {
+        V(haircutIsFinished);
+        log("The barber finished the haircut and waits for #" + clientCurrentlyServed + " to leave its shop");
+        P(clientIsGone);
+    }
+    
+    // Program entry point
+    public static void main(String[] args) {
+        new SemaphoreBarbershop();
+    }
+}
