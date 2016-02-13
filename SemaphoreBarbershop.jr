@@ -17,7 +17,7 @@ public final class SemaphoreBarbershop extends AbstractBarbershop {
     // Used by clients to wait after their turn to get a haircut
     private cap void() turnToGetAHaircut[] = new cap void()[TOTAL_NUM_CLIENTS];
 
-    // Called when a philosopher process starts
+    // Called when a client process starts
     @Override
     protected void initClientProcess(int id) {
         turnToGetAHaircut[id] = new sem(0);
@@ -64,7 +64,7 @@ public final class SemaphoreBarbershop extends AbstractBarbershop {
             P(turnToGetAHaircut[id]);
             // Get off the chair
             chairs[freeChair] = null;
-            log("#" + id + " is called by the barber, leaves waiting chair #" + freeChair + " and get an haircut");
+            log("#" + id + " is called by the barber, leaves waiting chair #" + freeChair + " and gets an haircut");
         }
         // Wait the the haircut to be finished
         P(haircutIsFinished);

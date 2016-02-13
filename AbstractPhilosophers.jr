@@ -3,10 +3,10 @@ import edu.ucdavis.jr.JR;
 public abstract class AbstractPhilosophers extends AbstractConcurrencyProgram {
 
     // Base time in milliseconds a philosopher takes to eat
-    private static final int BASE_TIME_EAT_MILLIS = 8;
+    private static final int BASE_TIME_EAT_MILLIS = 20;
     
     // Base time in milliseconds a philosopher takes to think
-    private static final int BASE_TIME_THINK_MILLIS = 5;
+    private static final int BASE_TIME_THINK_MILLIS = 15;
 
     // Possible philosopher states (not enums constants to speed up debug string building)
     protected static final char THINKING = 'T';
@@ -78,11 +78,11 @@ public abstract class AbstractPhilosophers extends AbstractConcurrencyProgram {
             ++numTimesEating[id];
         }
         
-        // Print debug info
+        // Log debug info
         StringBuilder sb = new StringBuilder();
         sb.append("  ").append(states[0]).append("   |   ").append(numTimesEating[0]).append('\n');
         sb.append(states[4]).append("   ").append(states[1]).append(" | ").append(numTimesEating[4]).append("   ").append(numTimesEating[1]).append("\n ");
         sb.append(states[3]).append(' ').append(states[2]).append("  |  ").append(numTimesEating[3]).append(' ').append(numTimesEating[2]).append("\n-------------");
-        System.out.println(sb.toString());
+        log(sb.toString());
     }
 }
