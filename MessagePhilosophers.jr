@@ -1,5 +1,8 @@
 import edu.ucdavis.jr.JR;
 
+import java.util.Queue;
+import java.util.LinkedList;
+
 public final class MessagePhilosophers extends AbstractPhilosophers {
 
     // Philosopher process' private channels
@@ -22,18 +25,7 @@ public final class MessagePhilosophers extends AbstractPhilosophers {
         while (true) {
             // Wait for a processes to enter or exit a critical section
             receive askOrReturnMutex(calling);
-            
-            System.out.println("\n askOrReturnMutex manager \n");
-            if (calling == null) {
-                for (int i = 0; i < 5; ++i) {
-                    if (channels[i] == null) {
-                        System.out.println("\n GOOBBY \n");
-                    }
-                }
-                System.out.println("\n DAYUM \n");
-                JR.exit(1);
-            }
-            
+
             // If it's the mutex holder that is exiting a critical section
             if (mutexHolder == calling) {
                 // If there is nobody waiting for the mutex
@@ -80,9 +72,8 @@ public final class MessagePhilosophers extends AbstractPhilosophers {
         // Give the mutex back
         send askOrReturnMutex(channels[id]);
         
-        if (states[id] != EATING) {
-            receive channels[id]();
-        }
+        // Wait for the ok to eat
+        receive channels[id]();
     }
     
     // Called when a philosopher wants to stop eating
