@@ -2,14 +2,14 @@ import edu.ucdavis.jr.JR;
 
 public final _monitor MonitorPhilosophers {
 
-    public static class Adapter extends AbstractPhilosophers {
+    public class Adapter extends AbstractPhilosophers {
 
         // Monitor object (must be separate because _monitors cannot use heritage and cannot be nested)
         private final MonitorPhilosophers monitor;
 
         // Constructor
-        public Adapter() {
-            this.monitor = new MonitorPhilosophers(this, "Monitor");
+        public Adapter(MonitorPhilosophers monitor) {
+            this.monitor = monitor;
         }
         
         // Called when a philosopher process starts
@@ -38,9 +38,9 @@ public final _monitor MonitorPhilosophers {
     private Adapter adapter;
     
     // Constructor
-    private MonitorPhilosophers(Adapter adapter, String id) {
+    private MonitorPhilosophers(String id, int placeholder) {
         this(id);
-        this.adapter = adapter;
+        adapter = new Adapter(this);
     }
     
     // Called when a philosopher wants to start eating
@@ -72,7 +72,7 @@ public final _monitor MonitorPhilosophers {
     
     // Program entry point
     public static void main(String[] args) {
-        registerUnexpectedEndAction();
-        new Adapter();
+        Adapter.registerUnexpectedEndAction();
+        new MonitorPhilosophers("Monitor", 0);
     }
 }
