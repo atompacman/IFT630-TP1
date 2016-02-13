@@ -1,6 +1,7 @@
 import edu.ucdavis.jr.JR;
 import edu.ucdavis.jr.QuiescenceRegistrationException;
 
+import java.util.Vector;
 import java.util.concurrent.ThreadLocalRandom;
 
 public abstract class AbstractConcurrencyProgram {
@@ -9,12 +10,21 @@ public abstract class AbstractConcurrencyProgram {
     private static final int RANDOM_ADDITIONNAL_TIME_MILLIS = 3;
     
     // Program duration in seconds
-    private static final int PROGRAM_DURATION_SECONDS = 10;
+    private static final int PROGRAM_DURATION_MILLIS = 500;
 
     // Process that stops the program after a certain time
-    private static process EndProgram {
-        variableWait(PROGRAM_DURATION_SECONDS * 1000);
-        JR.exit(1);
+    private process EndProgram {
+        // Wait
+        variableWait(PROGRAM_DURATION_MILLIS);
+        
+        // Log info
+        isLogActivated = false;
+        for (String line : debugLog) {
+            System.out.println(line);
+        }
+        
+        // Exit normally
+        JR.exit(0);
     }
 
     // Called when the program is in trouble !
@@ -22,14 +32,29 @@ public abstract class AbstractConcurrencyProgram {
         System.err.println("PROCESSES ARE EITHER IN A DEADLOCK OR ALL DEAD!!!");
     }
     
+    // A synchronized log containing debug information
+    protected final Vector<String> debugLog;
+    
+    // Log must be deactivated when it is printed to screen
+    private boolean isLogActivated;
+    
     // Called for every concurrent program
     protected AbstractConcurrencyProgram() {
+        this.debugLog       = new Vector<String>();
+        this.isLogActivated = true;
+        
         // Register function to call when things went wrong
         try {
             JR.registerQuiescenceAction(unexpectedEnd);
         } catch (QuiescenceRegistrationException e) {
             e.printStackTrace();
             JR.exit(1);
+        }
+    }
+    
+    protected void log(String debugLine) {
+        if (isLogActivated) {
+            debugLog.add(debugLine);
         }
     }
     
