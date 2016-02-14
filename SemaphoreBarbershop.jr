@@ -14,16 +14,16 @@ public final class SemaphoreBarbershop extends AbstractBarbershop {
     // Used by the barber to wait after the client to exit the barbershop
     private final sem clientIsGone = 0;
     
-    // Used by clients to wait after their turn to get a haircut
-    private cap void() turnToGetAHaircut[] = new cap void()[TOTAL_NUM_CLIENTS];
+    // Used by clients to wait after their turn to get an haircut
+    private cap void() turnToGetAnHaircut[] = new cap void()[TOTAL_NUM_CLIENTS];
 
     // Called when a client process starts
     @Override
     protected void initClientProcess(int id) {
-        turnToGetAHaircut[id] = new sem(0);
+        turnToGetAnHaircut[id] = new sem(0);
     }
     
-    // Called when a philosopher wants to start eating
+    // Called when a client wants an haircut
     @Override
     protected void goToTheBarbershop(int id) {
         log("#" + id + " arrives at the barbershop");
@@ -38,10 +38,10 @@ public final class SemaphoreBarbershop extends AbstractBarbershop {
         
         // If there are not client in the shop
         if (clientCurrentlyServed == null) {
-            log("#" + id + " wakes up the sleeping barber and gets an haircut");
             // Be the next client
             clientCurrentlyServed = id;
-            
+            log("#" + id + " wakes up the sleeping barber and gets an haircut");
+
             // Wake barber up
             V(aClientArrives);
             V(mutex);
@@ -61,7 +61,7 @@ public final class SemaphoreBarbershop extends AbstractBarbershop {
         
             // Wait for the barber to call my turn
             V(mutex);
-            P(turnToGetAHaircut[id]);
+            P(turnToGetAnHaircut[id]);
             // Get off the chair
             chairs[freeChair] = null;
             log("#" + id + " is called by the barber, leaves waiting chair #" + freeChair + " and gets an haircut");
@@ -86,7 +86,7 @@ public final class SemaphoreBarbershop extends AbstractBarbershop {
         } else {
             // Get the next client in the list
             clientCurrentlyServed = waitingList.poll();
-            V(turnToGetAHaircut[clientCurrentlyServed]);
+            V(turnToGetAnHaircut[clientCurrentlyServed]);
             V(mutex);
         }
     }
