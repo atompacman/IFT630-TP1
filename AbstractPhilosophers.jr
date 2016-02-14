@@ -44,8 +44,8 @@ public abstract class AbstractPhilosophers extends AbstractConcurrencyProgram {
     }
     
     // Called when a philosopher process starts (avoids async initialization problem with constructors)
-    // Different for each concurrency model
-    protected abstract void initPhilosopherProcess(int id);
+    // Different for each concurrency model (but optional)
+    protected void initPhilosopherProcess(int id) { }
     
     // Called when a philosopher wants to start eating.
     // Different for each concurrency model

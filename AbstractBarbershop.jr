@@ -50,8 +50,8 @@ public abstract class AbstractBarbershop extends AbstractConcurrencyProgram {
     }
     
     // Called when a client process starts (avoids async initialization problem with constructors)
-    // Different for each concurrency model
-    protected abstract void initClientProcess(int id);
+    // Different for each concurrency model (but optional)
+    protected void initClientProcess(int id) {}
     
     // Called when a client wants to get its hair cut
     // Different for each concurrency model

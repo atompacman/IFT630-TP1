@@ -2,14 +2,8 @@ import edu.ucdavis.jr.JR;
 
 public final _monitor MonitorBarbershop {
 
-    public class Adapter extends AbstractBarbershop {
+    public class AdapterB extends AbstractBarbershop {
 
-        // Called when a client process starts
-        @Override
-        protected void initClientProcess(int id) {
-
-        }
-    
         // Called when a client wants an haircut
         @Override
         protected void goToTheBarbershop(int id) {
@@ -37,20 +31,17 @@ public final _monitor MonitorBarbershop {
     // Used by the barber to wait for a client to wake himself up
     final _condvar aClientArrives;
     
-    // Used by the barber to wait after the client to exit the barbershop
-    final _condvar clientIsGone;
-    
     // Used by clients to wait after their turn to get an haircut
-    final _condvar turnToGetAnHaircut[Adapter.TOTAL_NUM_CLIENTS];
+    final _condvar turnToGetAnHaircut[AdapterB.TOTAL_NUM_CLIENTS];
 
     // Adapter
-    protected Adapter adapter;
+    protected AdapterB adapter;
     
     // Constructor
     private MonitorBarbershop(String id, int placeholder) {
         this(id);
         monitor = this;
-        adapter = new Adapter();
+        adapter = new AdapterB();
     }
 
     // Called when a client wants an haircut
@@ -58,7 +49,7 @@ public final _monitor MonitorBarbershop {
         adapter.log("#" + id + " arrives at the barbershop");
         
         // Return home if there are no chairs left in the waiting room
-        if (adapter.waitingList.size() == adapter.NUM_CHAIRS_IN_WAITING_ROOM) {
+        if (adapter.waitingList.size() == AdapterB.NUM_CHAIRS_IN_WAITING_ROOM) {
             adapter.log("#" + id + " returns home because waiting room is full");
             _return;
         }
@@ -74,7 +65,7 @@ public final _monitor MonitorBarbershop {
         } else {
             // Sit on a free chair
             int freeChair = -1;
-            for (int i = 0; i < adapter.NUM_CHAIRS_IN_WAITING_ROOM; ++i) {
+            for (int i = 0; i < AdapterB.NUM_CHAIRS_IN_WAITING_ROOM; ++i) {
                 if (adapter.chairs[i] == null) {
                     freeChair = i;
                     break;
@@ -93,9 +84,6 @@ public final _monitor MonitorBarbershop {
         }
         // Wait the the haircut to be finished
         _wait(haircutIsFinished);
-        
-        // Tell the barber that he can serve another client
-        _signal(clientIsGone);
     }
 
     // Called by the barber to wait after a client (if needed) and start the haircut
@@ -116,7 +104,6 @@ public final _monitor MonitorBarbershop {
     _proc void waitForClientToLeave() {
         _signal(haircutIsFinished);
         adapter.log("The barber finished the haircut and waits for #" + adapter.clientCurrentlyServed + " to leave its shop");
-        _wait(clientIsGone);
     }
     
     // Program entry point
