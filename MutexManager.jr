@@ -1,0 +1,50 @@
+import edu.ucdavis.jr.JR;
+
+import java.util.Queue;
+import java.util.LinkedList;
+
+public final class MutexManager {
+
+    // Communication channel between clients and the manager
+    public op void askOrReturnMutex(cap void());
+    
+    // Process that controls access to critical sections (mutex but with message)
+    private process MutexManager {
+        // The queue of private channels of processes waiting to acquire the mutex
+        Queue<cap void()> waitingForMutex = new LinkedList<cap void()>();
+        
+        // The private channel of the process currently holding the mutex
+        cap void() mutexHolder = null;
+    
+        // Holds the private channel of the calling processes
+        cap void() calling = null;
+    
+        while (true) {
+            // Wait for a processes to enter or exit a critical section
+            receive askOrReturnMutex(calling);
+
+            // If it's the mutex holder that is exiting a critical section
+            if (mutexHolder == calling) {
+                // If there is nobody waiting for the mutex
+                if (waitingForMutex.isEmpty()) {
+                    mutexHolder = null;
+                } else {
+                    // Give the mutex to the next processes in the queue
+                    mutexHolder = waitingForMutex.poll();
+                    // Call back the calling processes through its private channel
+                    send mutexHolder();
+                }
+            // If nobody currently has the mutex
+            } else if (mutexHolder == null) {
+                mutexHolder = calling;
+                // Call the processes through its private channel
+                send mutexHolder();
+            // If another processes has the mutex
+            } else {
+                // Process goes in a queue, waiting for the mutex to be free
+                // This is tagged by the compiler as an unsafe operation... why ?
+                waitingForMutex.add(calling);
+            }
+        }
+    }
+}

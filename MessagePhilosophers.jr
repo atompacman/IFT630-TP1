@@ -8,49 +8,13 @@ public final class MessagePhilosophers extends AbstractPhilosophers {
     // Philosopher process' private channels
     private final cap void() channels[] = new cap void()[5];
     
-    // Communication channel between philosophers and the philosopher manager
-    private op void askOrReturnMutex(cap void());
+    // Manager mutex assignation
+    private final MutexManager manager;
     
-    // Process that controls access to critical sections (mutex but with message)
-    private process MutexManager {
-        // The queue of private channels of processes waiting to acquire the mutex
-        Queue<cap void()> waitingForMutex = new LinkedList<cap void()>();
-        
-        // The private channel of the process currently holding the mutex
-        cap void() mutexHolder = null;
-    
-        // Holds the private channel of the calling processes
-        cap void() calling = null;
-    
-        while (true) {
-            // Wait for a processes to enter or exit a critical section
-            receive askOrReturnMutex(calling);
-
-            // If it's the mutex holder that is exiting a critical section
-            if (mutexHolder == calling) {
-                // If there is nobody waiting for the mutex
-                if (waitingForMutex.isEmpty()) {
-                    mutexHolder = null;
-                } else {
-                    // Give the mutex to the next processes in the queue
-                    mutexHolder = waitingForMutex.poll();
-                    // Call back the calling processes through its private channel
-                    send mutexHolder();
-                }
-            // If nobody currently has the mutex
-            } else if (mutexHolder == null) {
-                mutexHolder = calling;
-                // Call the processes through its private channel
-                send mutexHolder();
-            // If another processes has the mutex
-            } else {
-                // Process goes in a queue, waiting for the mutex to be free
-                // This is tagged by the compiler as an unsafe operation... why ?
-                waitingForMutex.add(calling);
-            }
-        }
+    public MessagePhilosophers(MutexManager manager) {
+        this.manager = manager;
     }
-
+    
     // Called when a philosopher process starts
     @Override
     protected void initPhilosopherProcess(int id) {
@@ -61,7 +25,7 @@ public final class MessagePhilosophers extends AbstractPhilosophers {
     @Override
     protected void pickUpForks(int id) {
         // Ask for mutex
-        send askOrReturnMutex(channels[id]);
+        send manager.askOrReturnMutex(channels[id]);
         
         // Wait for manager to give mutex
         receive channels[id]();
@@ -70,7 +34,7 @@ public final class MessagePhilosophers extends AbstractPhilosophers {
         eatIfPossible(id);
         
         // Give the mutex back
-        send askOrReturnMutex(channels[id]);
+        send manager.askOrReturnMutex(channels[id]);
         
         // Wait for the ok to eat
         receive channels[id]();
@@ -80,7 +44,7 @@ public final class MessagePhilosophers extends AbstractPhilosophers {
     @Override
     protected void putDownForks(int id) {
         // Ask for mutex
-        send askOrReturnMutex(channels[id]);
+        send manager.askOrReturnMutex(channels[id]);
         
         // Wait for manager to give mutex
         receive channels[id]();
@@ -90,7 +54,7 @@ public final class MessagePhilosophers extends AbstractPhilosophers {
         eatIfPossible((id + 1) % 5);
         
         // Give the mutex back
-        send askOrReturnMutex(channels[id]);
+        send manager.askOrReturnMutex(channels[id]);
     }
     
     // Called to make a philosopher eat if possible
@@ -104,6 +68,6 @@ public final class MessagePhilosophers extends AbstractPhilosophers {
     
     // Program entry point
     public static void main(String[] args) {
-        new MessagePhilosophers();
+        new MessagePhilosophers(new MutexManager());
     }
 }
