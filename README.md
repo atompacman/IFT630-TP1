@@ -8,5 +8,5 @@ jr filename
 Files with extension ".m" can be executed with
 ```
 m2jr filename.m -sw
-jr filename
+jr filename -sw
 ```

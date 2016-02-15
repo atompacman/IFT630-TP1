@@ -29,7 +29,7 @@ public abstract class AbstractPhilosophers extends AbstractConcurrencyProgram {
             variableWait(BASE_TIME_EAT_MILLIS);
 
             if (states[id] != EATING) {
-                System.err.printf("\n *** Philosopher #%d is %s after picking up forks *** ERROR *** \n", id, states[id]);
+                System.err.printf("\n *** ERROR *** Philosopher #%d is %s after picking up forks *** ERROR *** \n", id, states[id]);
                 JR.exit(1);
             }
             
@@ -37,7 +37,7 @@ public abstract class AbstractPhilosophers extends AbstractConcurrencyProgram {
             variableWait(BASE_TIME_THINK_MILLIS);
 
             if (states[id] != THINKING) {
-                System.err.printf("\n *** Philosopher #%d is %s after putting forks down *** ERROR *** \n", id, states[id]);
+                System.err.printf("\n *** ERROR *** Philosopher #%d is %s after putting forks down *** ERROR *** \n", id, states[id]);
                 JR.exit(1);
             }
         }

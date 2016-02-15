@@ -1,0 +1,132 @@
+import edu.ucdavis.jr.JR;
+
+public final class MessageBarbershop extends AbstractBarbershop {
+
+    // Client process' private channels
+    private final cap void() channels[] = new cap void()[TOTAL_NUM_CLIENTS];
+    
+    // Barber private channel
+    private final op void barberChannel();
+    
+    // Used by the current client to wait for its hair to be cut
+    private final sem haircutIsFinished = 0;
+    
+    // Used by the barber to wait for a client to wake himself up
+    private final sem aClientArrives = 0;
+    
+    // Used by the barber to wait after the client to exit the barbershop
+    private final sem clientIsGone = 0;
+    
+    // Used by clients to wait after their turn to get an haircut
+    private cap void() turnToGetAnHaircut[] = new cap void()[TOTAL_NUM_CLIENTS];
+
+    // Manager mutex assignation
+    private final MutexManager manager;
+    
+    public MessageBarbershop(MutexManager manager) {
+        this.manager = manager;
+    }
+    
+    // Called when a client process starts
+    @Override
+    protected void initClientProcess(int id) {
+        channels[id]           = new op void();
+        turnToGetAnHaircut[id] = new sem(0);
+    }
+    
+    // Called when a client wants an haircut
+    @Override
+    protected void goToTheBarbershop(int id) {
+        log("#" + id + " arrives at the barbershop");
+        // Ask for mutex
+        send manager.askOrReturnMutex(channels[id]);
+        
+        // Wait for manager to give mutex
+        receive channels[id]();
+        
+        // Return home if there are no chairs left in the waiting room
+        if (waitingList.size() == NUM_CHAIRS_IN_WAITING_ROOM) {
+            log("#" + id + " returns home because waiting room is full");
+            // Give the mutex back
+            send manager.askOrReturnMutex(channels[id]);
+            return;
+        }
+        
+        // If there are not client in the shop
+        if (clientCurrentlyServed == null) {
+            // Be the next client
+            clientCurrentlyServed = id;
+            log("#" + id + " wakes up the sleeping barber and gets an haircut");
+
+            // Wake barber up
+            V(aClientArrives);
+            
+            // Give the mutex back
+            send manager.askOrReturnMutex(channels[id]);
+        } else {
+            // Sit on a free chair
+            int freeChair = -1;
+            for (int i = 0; i < NUM_CHAIRS_IN_WAITING_ROOM; ++i) {
+                if (chairs[i] == null) {
+                    freeChair = i;
+                    break;
+                }
+            }
+            chairs[freeChair] = id;
+            log("#" + id + " sits on waiting chair #" + freeChair);
+            // Add itself to the waiting list
+            waitingList.add(id);
+        
+            // Wait for the barber to call my turn
+            // Give the mutex back
+            send manager.askOrReturnMutex(channels[id]);
+            P(turnToGetAnHaircut[id]);
+            // Get off the chair
+            chairs[freeChair] = null;
+            log("#" + id + " is called by the barber, leaves waiting chair #" + freeChair + " and gets an haircut");
+        }
+        // Wait the the haircut to be finished
+        P(haircutIsFinished);
+        
+        // Tell the barber that he can serve another client
+        V(clientIsGone);
+    }
+
+    // Called by the barber to wait after a client (if needed) and start the haircut
+    @Override
+    protected void sleepUntilClient() {
+        // Ask for mutex
+        send manager.askOrReturnMutex(barberChannel);
+        
+        // Wait for manager to give mutex
+        receive barberChannel();
+        
+        // If there are no clients waiting for their hair to be cut, wait
+        if (waitingList.isEmpty()) {
+            clientCurrentlyServed = null;
+            log("The barber goes to sleep because the waiting room is empty");
+            // Give the mutex back
+            send manager.askOrReturnMutex(barberChannel);
+            P(aClientArrives);
+        } else {
+            // Get the next client in the list
+            clientCurrentlyServed = waitingList.poll();
+            V(turnToGetAnHaircut[clientCurrentlyServed]);
+            // Give the mutex back
+            send manager.askOrReturnMutex(barberChannel);
+        }
+    }
+    
+    // Called by the barber when he is done cutting the hair of its client
+    @Override
+    protected void waitForClientToLeave() {
+        V(haircutIsFinished);
+        log("The barber finished the haircut and waits for #" + clientCurrentlyServed + " to leave its shop");
+        P(clientIsGone);
+    }
+    
+    // Program entry point
+    public static void main(String[] args) {
+        new MessageBarbershop(new MutexManager());
+    }
+}

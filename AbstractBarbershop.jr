@@ -32,20 +32,32 @@ public abstract class AbstractBarbershop extends AbstractConcurrencyProgram {
     // Barbershop client processes
     private process Client((int id = 0; id < TOTAL_NUM_CLIENTS; ++id)) {
         initClientProcess(id);
-        variableWait(50);
         while (true) {
-            goToTheBarbershop(id);
+            // Client wait first because the algorithm only works if the barber has the time to start sleeping !
             variableWait(BASE_TIME_RETURN_TO_BARBERSHOP);
+            goToTheBarbershop(id);
         }
     }
     
     // Barber process
     private process Barber {
+        // Avoids a NPE because constructor is not completed when thread start
         variableWait(50);
         while(true) {
             sleepUntilClient();
+            
+            if (clientCurrentlyServed == null) {
+                System.err.println("\n *** ERROR *** clientCurrentlyServed is null after sleepUntilClient *** ERROR *** \n");
+                JR.exit(1);
+            }
             variableWait(BASE_TIME_HAIRCUT);
+            
             waitForClientToLeave();
+            
+            if (clientCurrentlyServed == null) {
+                System.err.println("\n *** ERROR *** clientCurrentlyServed is null after waitForClientToLeave *** ERROR *** \n");
+                JR.exit(1);
+            }
         }
     }
     
