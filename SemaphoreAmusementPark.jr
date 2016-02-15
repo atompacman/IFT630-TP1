@@ -13,7 +13,7 @@ public class SemaphoreAmusementPark {
     // private static final int RIDE_DURATION_SECONDS = 30;
 
     // Lap duration in seconds (5 laps = 1 ride)
-    private static final int LAP_DURATION_SECONDS = 2;
+    private static final int LAP_DURATION_SECONDS = 1;
 
     // Program duration in seconds
     private static final int PROGRAM_DURATION_SECONDS = 30;
@@ -30,8 +30,11 @@ public class SemaphoreAmusementPark {
     // Mutex
     private static final sem mutex = 1;
     
-    // Conditional variables for people
+    // Counting semaphore used by people to check if the car has space available (FULL)
     private static final sem canGetIn = C;  // Allow access until the car is full
+
+    // Counting semaphore used by people to check if the car is empty (EMPTY)
+    private static final sem canGetOut = 0;  // Allow access until the car is full
 
     // First-in-first-out queue representing people(id) waiting in line for the rollercoaster
     private static Queue<Integer> waitingLine = new LinkedList<Integer>();
@@ -65,6 +68,8 @@ public class SemaphoreAmusementPark {
         while (true) {
             //System.out.println("ABOUT TO GET IN THE CAR IF I CAN");
             getInCarIfPossible();
+            //System.out.println("GETTING OUT: RIDE SHOULD BE OVER");
+            getOutOfCarIfPossible();
         }
     }
 
@@ -79,7 +84,16 @@ public class SemaphoreAmusementPark {
         }
     }
 
-
+    private static void getOutOfCarIfPossible() {
+        P(canGetOut);
+        P(mutex);
+        waitingLine.add(car.remove(0));
+        System.out.println("Someone got out of the car. Size = " + car.size());
+        V(mutex);
+        // if (car.size() == 0)
+        //     System.out.println("Car is now empty. People will now be able to get in.");
+        V(canGetIn);
+    }
 
     private static void do5LapsAndStop() {
         P(canStart);
@@ -89,19 +103,12 @@ public class SemaphoreAmusementPark {
         System.out.println("Ride is starting! WOOOO!! First passenger: #" + car.get(0) + " Last passenger: #" + car.get(car.size()-1));
         wait(5 * LAP_DURATION_SECONDS * 1000);
         System.out.println("Ride has stopped.");
-        
+        V(mutex);
         System.out.println("Everyone is getting out of the car (and back in line for more).");
-        
-        //TODO getting out also in parallel? I think so.
-        for (int i = C-1; i >= 0; --i) {
-            waitingLine.add(car.remove(i));
-            System.out.println("Someone got out of the car. Size = " + car.size());
-            if (i == 0) {
-                V(mutex);
-                System.out.println("Car is now empty.");
-            }
-            V(canGetIn);
+        for (int i = 0; i < C; ++i) {
+            V(canGetOut);
         }
+        
     }
     
     // Process that stops the program after a certain time
