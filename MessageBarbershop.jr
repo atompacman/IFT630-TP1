@@ -9,16 +9,16 @@ public final class MessageBarbershop extends AbstractBarbershop {
     private final op void barberChannel();
     
     // Used by the current client to wait for its hair to be cut
-    private final sem haircutIsFinished = 0;
+    private final op void haircutIsFinished();
     
     // Used by the barber to wait for a client to wake himself up
-    private final sem aClientArrives = 0;
+    private final op void aClientArrives();
     
     // Used by the barber to wait after the client to exit the barbershop
-    private final sem clientIsGone = 0;
+    private final op void clientIsGone();
     
     // Used by clients to wait after their turn to get an haircut
-    private cap void() turnToGetAnHaircut[] = new cap void()[TOTAL_NUM_CLIENTS];
+    private final cap void() turnToGetAnHaircut[] = new cap void()[TOTAL_NUM_CLIENTS];
 
     // Manager mutex assignation
     private final MutexManager manager;
@@ -59,7 +59,7 @@ public final class MessageBarbershop extends AbstractBarbershop {
             log("#" + id + " wakes up the sleeping barber and gets an haircut");
 
             // Wake barber up
-            V(aClientArrives);
+            send aClientArrives();
             
             // Give the mutex back
             send manager.askOrReturnMutex(channels[id]);
@@ -80,16 +80,16 @@ public final class MessageBarbershop extends AbstractBarbershop {
             // Wait for the barber to call my turn
             // Give the mutex back
             send manager.askOrReturnMutex(channels[id]);
-            P(turnToGetAnHaircut[id]);
+            receive turnToGetAnHaircut[id]();
             // Get off the chair
             chairs[freeChair] = null;
             log("#" + id + " is called by the barber, leaves waiting chair #" + freeChair + " and gets an haircut");
         }
         // Wait the the haircut to be finished
-        P(haircutIsFinished);
+        receive haircutIsFinished();
         
         // Tell the barber that he can serve another client
-        V(clientIsGone);
+        send clientIsGone();
     }
 
     // Called by the barber to wait after a client (if needed) and start the haircut
@@ -107,11 +107,11 @@ public final class MessageBarbershop extends AbstractBarbershop {
             log("The barber goes to sleep because the waiting room is empty");
             // Give the mutex back
             send manager.askOrReturnMutex(barberChannel);
-            P(aClientArrives);
+            receive aClientArrives();
         } else {
             // Get the next client in the list
             clientCurrentlyServed = waitingList.poll();
-            V(turnToGetAnHaircut[clientCurrentlyServed]);
+            send turnToGetAnHaircut[clientCurrentlyServed]();
             // Give the mutex back
             send manager.askOrReturnMutex(barberChannel);
         }
@@ -120,9 +120,9 @@ public final class MessageBarbershop extends AbstractBarbershop {
     // Called by the barber when he is done cutting the hair of its client
     @Override
     protected void waitForClientToLeave() {
-        V(haircutIsFinished);
+        send haircutIsFinished();
         log("The barber finished the haircut and waits for #" + clientCurrentlyServed + " to leave its shop");
-        P(clientIsGone);
+        receive clientIsGone();
     }
     
     // Program entry point
