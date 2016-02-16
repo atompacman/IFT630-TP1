@@ -5,7 +5,7 @@ import java.util.ArrayList;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-public class SemaphoreAmusementPark {
+public _monitor MonitorAmusementPark {
 
     // Lap duration in seconds (5 laps = 1 ride)
     private static final int LAP_DURATION_SECONDS = 1;
@@ -25,25 +25,34 @@ public class SemaphoreAmusementPark {
     // Array containing the IDs of the people in the rollercoaster car (empty at first)
     private static ArrayList<Integer> car = new ArrayList<Integer>(C);
 
-    // Mutex
-    private static final sem mutex = 1;    
-
     // Conditional variable used by the rollercoaster to know when it can start (when the car is full)
-    private static final sem canStart = 0;
+    _condvar canStart;
 
     // Conditional variable used by a person to know if it can enter in the car (when the car is empty). 
     // It starts at 1 because we want the first one to be able to enter directly. 
-    private static final sem canEnter = 1;
+    _condvar canEnter;
 
     // Conditional variable used by a person to know if it an exit the car (when the ride has stopped)
-    private static final sem canExit = 0;
+    _condvar canExit;
+
+
+
+    // Monitor
+    private static MonitorAmusementPark monitor = new MonitorAmusementPark("Monitor");
 
     // Rollercoaster process
     private static process RollerCoaster {
         // It goes on and on
+        monitor.openTheGates();
         while (true) {
-            do5LapsAndStop();
+            System.out.println("5 laps and stop");
+            monitor.do5LapsAndStop();
         }
+    }
+
+    // Should only be done once, in order to let people in at first
+    private void openTheGates() {
+        _signal(canEnter);
     }
 
     // Person process
@@ -51,51 +60,48 @@ public class SemaphoreAmusementPark {
         // Those guys never stop !
         
         while (true) {
-            getInCarIfPossible(id);
-            getOutOfCarIfPossible(id);
+            System.out.println("Get in car if possible");
+            monitor.getInCarIfPossible(id);
+            System.out.println("Get out of car if possible");
+            monitor.getOutOfCarIfPossible(id);
         }
     }
 
-    private static void getInCarIfPossible(int id) {
-        P(canEnter);
-        P(mutex);
+    _proc void getInCarIfPossible(int id) {
+        System.out.println("I'm trying to get in the car!");
+        _wait(canEnter);
         car.add(id);
         System.out.println("Person #" + id + " got in the car. Size = " + car.size());
-        V(mutex);
         if (car.size() == C) {
             System.out.println("Car is now full. The ride is about to begin!");
-            V(canStart);
+            _signal(canStart);
         }
         else
         {
-            V(canEnter);
+            _signal(canEnter);
         }
     }
 
-    private static void getOutOfCarIfPossible(int id) {
-        P(canExit);
-        P(mutex);
+    _proc void getOutOfCarIfPossible(int id) {
+        _wait(canExit);
         car.remove(new Integer(id));    // 
         System.out.println("Person #" + id + " got out of the car. Size = " + car.size());
-        V(mutex);
         if (car.size() == 0) {
             System.out.println("Car is now empty. People will now be able to get in.");
-            V(canEnter);
+            _signal(canEnter);
         }
         else {
-            V(canExit);
+            _signal(canExit);
         }
     }
 
-    private static void do5LapsAndStop() {
-        P(canStart);
-        P(mutex);
+    _proc void do5LapsAndStop() {
+        _wait(canStart);
         System.out.println("Ride is starting! WOOOO!!");
         wait(5 * LAP_DURATION_SECONDS * 1000);
         System.out.println("Ride has stopped.");
-        V(mutex);
         System.out.println("Everyone is getting out of the car (and back in line for more).");
-        V(canExit);
+        _signal(canExit);
     }
     
     // Process that stops the program after a certain time
