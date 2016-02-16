@@ -1,0 +1,99 @@
+import edu.ucdavis.jr.JR;
+
+public final class MessageMatrixMultiplication extends AbstractConcurrencyProgram {
+
+    // Matrix dimension
+    private static final int SIZE = 3;
+
+    // Worker thread private channels for input dot product data
+    private static final cap void(double[], double[]) dotProduct[] = new cap void(double[], double[])[SIZE*SIZE];
+    static {
+        for (int i = 0; i < SIZE*SIZE; ++i) {
+            dotProduct[i] = new op void(double[], double[]);
+        }
+    }
+    
+    // Master thread public channel for computation result
+    private final op void result(int, double);
+    
+    // Master process
+    private process Master {
+        // Create matrices
+        double[][] matrixA = new double[SIZE][SIZE];
+        double[][] matrixB = new double[SIZE][SIZE];
+        for (int n = 0; n < SIZE; ++n) {
+            for (int m = 0; m < SIZE; ++m) {
+                matrixA[n][m] = matrixB[n][m] = n * SIZE + m;
+            }
+        }
+        
+        // Print input matrices
+        System.out.println("A:");
+        printMatrix(matrixA);
+        System.out.println("B:");
+        printMatrix(matrixB);
+        
+        // Dispatch data to worker threads
+        double[][] matrixBTransposed = transposeMatrix(matrixB);
+        for (int n = 0; n < SIZE; ++n) {
+            for (int m = 0; m < SIZE; ++m) {
+                send dotProduct[m*SIZE+n](matrixA[n], matrixBTransposed[m]);
+            }
+        }
+
+        // Wait for results
+        double[][] outputMatrix = new double[SIZE][SIZE];
+        int id;
+        double total;
+        int resultsReceived = 0;
+        while (resultsReceived < SIZE*SIZE) {
+            receive result(id, total);
+            outputMatrix[id % SIZE][id / SIZE] = total;
+            ++resultsReceived;
+        }
+
+        // Print results
+        System.out.println("Result:");
+        printMatrix(outputMatrix);
+    }
+    
+    // Worker processes
+    private process Worker((int id = 0; id < SIZE*SIZE; ++id)) {
+        // Receive data to compute from master
+        double[] leftRow;
+        double[] rightColumn;
+        receive dotProduct[id](leftRow, rightColumn);
+        // Perform dot product
+        double total = 0;
+        for (int i = 0; i < SIZE; ++i) {
+            total += leftRow[i] * rightColumn[i];
+        }
+        
+        // Send result back to master
+        send result(id, total);
+    }
+    
+    private static final void printMatrix(double[][] mat) {
+        for (int n = 0; n < SIZE; ++n) {
+            for (int m = 0; m < SIZE; ++m) {
+                System.out.printf("%5.2f ", mat[n][m]);
+            }
+            System.out.println();
+        }
+    }
+    
+    private static final double[][] transposeMatrix(double[][] mat) {
+        double[][] transposed = new double[SIZE][SIZE];
+        for (int n = 0; n < SIZE; ++n) {
+            for (int m = 0; m < SIZE; ++m) {
+                transposed[m][n] = mat[n][m];
+            }
+        }
+        return transposed;
+    }
+    
+    // Program entry point
+    public static void main(String[] args) {
+        new MessageMatrixMultiplication();
+    }
+}
