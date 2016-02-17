@@ -5,13 +5,18 @@ import java.util.ArrayList;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+/*
+ * Alexandre Blouin
+ * Jérémie Coulombe
+ */
+
 public _monitor MonitorAmusementPark {
 
     // Lap duration in seconds (5 laps = 1 ride)
     private static final int LAP_DURATION_SECONDS = 2;
 
     // Program duration in seconds
-    private static final int PROGRAM_DURATION_SECONDS = 25;
+    private static final int PROGRAM_DURATION_SECONDS = 35;
 
     // Maximum time in milliseconds that is randomly added to base time when riding the rollecoaster
     private static final int RANDOM_ADDITIONNAL_TIME_MILLIS = 5;
@@ -35,6 +40,10 @@ public _monitor MonitorAmusementPark {
     // Conditional variable used by a person to know if it an exit the car (when the ride has stopped)
     _condvar canExit;
 
+    _var boolean entering = true;
+
+    _var boolean exiting = false;
+
 
 
     // Monitor
@@ -54,34 +63,38 @@ public _monitor MonitorAmusementPark {
         // Those guys never stop !
         
         while (true) {
-            // System.out.println("Get in car if possible");
             monitor.getInCarIfPossible(id);
-            // System.out.println("Get out of car if possible");
             monitor.getOutOfCarIfPossible(id);
         }
     }
 
     _proc void getInCarIfPossible(int id) {
-        // System.out.println("I'm trying to get in the car!");
-        if (car.size() == C) {
+        if (!monitor.entering)
             _wait(canEnter);
-        }
-        car.add(id);
+        else
+            car.add(id);
+
         System.out.println("Person #" + id + " got in the car. Size = " + car.size());
         if (car.size() == C) {
             System.out.println("Car is now full. The ride is about to begin!");
+            monitor.entering = false;
+            monitor.exiting = false;
             _signal(canStart);
         }
+        
     }
 
     _proc void getOutOfCarIfPossible(int id) {
-        _wait(canExit);
-        System.out.println("Trying to get out!");
+        if (!monitor.exiting)
+            _wait(canExit);
+        else
+            car.remove(new Integer(id));
 
-        car.remove(new Integer(id));
         System.out.println("Person #" + id + " got out of the car. Size = " + car.size());
         if (car.size() == 0) {
             System.out.println("Car is now empty. People will now be able to get in.");
+            monitor.exiting = false;
+            monitor.entering = true;
             _signal(canEnter);
         }
     }
@@ -92,6 +105,7 @@ public _monitor MonitorAmusementPark {
         wait(5 * LAP_DURATION_SECONDS * 1000);
         System.out.println("Ride has stopped.");
         System.out.println("Everyone is getting out of the car (and back in line for more).");
+        monitor.exiting = true;
         _signal(canExit);
     }
     

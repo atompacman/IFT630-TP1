@@ -4,6 +4,11 @@ import edu.ucdavis.jr.QuiescenceRegistrationException;
 import java.util.Vector;
 import java.util.concurrent.ThreadLocalRandom;
 
+/*
+ * Alexandre Blouin
+ * Jérémie Coulombe
+ */
+
 public abstract class AbstractConcurrencyProgram {
 
     // Maximum time in milliseconds that is randomly added to base waiting time to simulate randomness

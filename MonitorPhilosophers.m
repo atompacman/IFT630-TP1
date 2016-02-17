@@ -1,5 +1,10 @@
 import edu.ucdavis.jr.JR;
 
+/*
+ * Alexandre Blouin
+ * Jérémie Coulombe
+ */
+
 public final _monitor MonitorPhilosophers {
 
     public class AdapterA extends AbstractPhilosophers {

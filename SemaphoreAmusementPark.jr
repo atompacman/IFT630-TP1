@@ -5,6 +5,11 @@ import java.util.ArrayList;
 
 import java.util.concurrent.ThreadLocalRandom;
 
+/*
+ * Alexandre Blouin
+ * Jérémie Coulombe
+ */
+
 public class SemaphoreAmusementPark {
 
     // Lap duration in seconds (5 laps = 1 ride)
